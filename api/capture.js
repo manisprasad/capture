@@ -1,54 +1,56 @@
 import express from 'express';
 import cors from 'cors';
-import puppeteer from 'puppeteer';
-
-const PORT = process.env.PORT || 3000;
+import puppeteer from 'puppeteer-core';
+import chromium from 'chrome-aws-lambda';
+import os from 'os';
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: "https://manisprasad.github.io/capture/",
-    methods: ["GET", "POST"]
+  origin: "https://manisprasad.github.io/capture/",
+  methods: ["GET", "POST"]
 }));
 
-app.get('/' , (req, res) => {
-    res.json({
-        message: "Helo dude"
-    })
-})
+app.get('/', (req, res) => {
+  res.json({ message: "Hello dude" });
+});
 
 app.get('/capture', async (req, res) => {
-    try {
-        const browser = await puppeteer.launch({
-            headless: 'new', // use 'true' if you're on a server without a display
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+  let browser = null;
 
-        const page = await browser.newPage();
-        await page.goto('https://manisprasad.github.io/capture/', {
-            waitUntil: 'networkidle0'
-        });
+  try {
+    const isDev = !process.env.AWS_REGION; // Simple check to see if it's running locally
 
-        // Optional: Set viewport if needed
-        await page.setViewport({ width: 1200, height: 800 });
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: isDev
+        ? '/path/to/your/local/chrome' // ✅ Replace with your local Chrome path
+        : await chromium.executablePath,
+      headless: chromium.headless,
+    });
 
-        // Get full-page screenshot as buffer
-        const screenshotBuffer = await page.screenshot({
-            fullPage: true,
-            type: 'png'
-        });
+    const page = await browser.newPage();
+    await page.goto('https://manisprasad.github.io/capture/', {
+      waitUntil: 'networkidle0',
+    });
 
-        await browser.close();
+    await page.setViewport({ width: 1200, height: 800 });
 
-        // Send screenshot as image response
-        res.set('Content-Type', 'image/png');
-        res.send(screenshotBuffer);
-    } catch (error) {
-        console.error('Screenshot capture failed:', error);
-        res.status(500).send('Screenshot capture failed');
-    }
+    const screenshotBuffer = await page.screenshot({
+      fullPage: true,
+      type: 'png',
+    });
+
+    await browser.close();
+
+    res.setHeader('Content-Type', 'image/png');
+    res.send(screenshotBuffer);
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error('Screenshot capture failed:', error);
+    res.status(500).send('Screenshot capture failed');
+  }
 });
 
-app.listen(PORT, () => {
-    console.log(`Screenshot server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log("Serve is running"));
