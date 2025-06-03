@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 app.use(cors({
-    origin: "http://localhost:5500",
+    origin: "https://manisprasad.github.io/capture/",
     methods: ["GET", "POST"]
 }));
 
@@ -25,7 +25,7 @@ app.get('/capture', async (req, res) => {
         });
 
         const page = await browser.newPage();
-        await page.goto('http://localhost:5500', {
+        await page.goto('https://manisprasad.github.io/capture/', {
             waitUntil: 'networkidle0'
         });
 
