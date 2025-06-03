@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import puppeteer from 'puppeteer-core';
 import chromium from 'chrome-aws-lambda';
-import os from 'os';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,13 +19,15 @@ app.get('/capture', async (req, res) => {
   let browser = null;
 
   try {
-    const isDev = !process.env.AWS_REGION; // Simple check to see if it's running locally
+    const executablePath = await chromium.executablePath;
+
+    if (!executablePath) {
+      throw new Error("Chromium executable path not found. This only works on Vercel or AWS Lambda.");
+    }
 
     browser = await puppeteer.launch({
       args: chromium.args,
-      executablePath: isDev
-        ? '/path/to/your/local/chrome' // ✅ Replace with your local Chrome path
-        : await chromium.executablePath,
+      executablePath,
       headless: chromium.headless,
     });
 
